@@ -3,12 +3,23 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { authGuard } from '../plugins/auth-guard.js';
 
+const AIProviderSchema = z.object({
+  provider: z.enum(['anthropic', 'openai']),
+  apiKey: z.string().min(1),
+  baseUrl: z.string().url().optional(),
+  models: z.object({
+    fast: z.string().min(1),
+    powerful: z.string().min(1),
+  }),
+});
+
 const UpdateSettingsBody = z.object({
   defaultTemplate: z.string().optional(),
   defaultTarget: z.string().optional(),
   outputLanguage: z.string().optional(),
   retentionLevel: z.enum(['minimal', 'standard', 'detailed']).optional(),
   enabledSkills: z.record(z.boolean()).optional(),
+  aiProvider: AIProviderSchema.nullable().optional(),
 });
 
 export async function settingsRoutes(app: FastifyInstance) {
@@ -27,6 +38,7 @@ export async function settingsRoutes(app: FastifyInstance) {
           outputLanguage: 'zh-CN',
           retentionLevel: 'standard',
           enabledSkills: {},
+          aiProvider: null,
         });
       }
       return reply.send({
@@ -35,6 +47,7 @@ export async function settingsRoutes(app: FastifyInstance) {
         outputLanguage: settings.outputLanguage,
         retentionLevel: settings.retentionLevel,
         enabledSkills: settings.enabledSkillsJson,
+        aiProvider: settings.aiProviderJson ?? null,
       });
     },
   );
@@ -55,6 +68,9 @@ export async function settingsRoutes(app: FastifyInstance) {
       if (parsed.data.outputLanguage !== undefined) data.outputLanguage = parsed.data.outputLanguage;
       if (parsed.data.retentionLevel !== undefined) data.retentionLevel = parsed.data.retentionLevel;
       if (parsed.data.enabledSkills !== undefined) data.enabledSkillsJson = parsed.data.enabledSkills;
+      if (parsed.data.aiProvider !== undefined) {
+        data.aiProviderJson = parsed.data.aiProvider;
+      }
 
       await prisma.userSettings.upsert({
         where: { userId },

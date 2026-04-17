@@ -16,4 +16,7 @@ export { run as runCardwright } from './cardwright/index.js';
 
 // LLM utilities
 export { callClaude } from './llm/client.js';
-export { MODELS } from './llm/models.js';
+export { MODELS, getFastModel, getPowerfulModel } from './llm/models.js';
+export { createProvider, configFromEnv } from './llm/factory.js';
+export { setActiveProvider, clearActiveProvider } from './llm/provider.js';
+export type { LLMProvider } from './llm/provider.js';

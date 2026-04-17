@@ -40,6 +40,10 @@ export type {
 export { ERROR_CODES } from './errors.js';
 export type { ErrorCode, NoteSeedError } from './errors.js';
 
+// AI Provider types
+export type { AIProviderType, AIModelMapping, AIProviderConfig } from './ai-provider.js';
+export { DEFAULT_ANTHROPIC_MODELS, DEFAULT_OPENAI_MODELS } from './ai-provider.js';
+
 // Skill I/O types
 export type {
   PageSenseOutput,

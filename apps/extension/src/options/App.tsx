@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { SaveTarget } from '@noteseed/shared-types';
-import { SAVE_TARGETS } from '@noteseed/shared-types';
+import type { SaveTarget, AIProviderType } from '@noteseed/shared-types';
+import { SAVE_TARGETS, DEFAULT_ANTHROPIC_MODELS, DEFAULT_OPENAI_MODELS } from '@noteseed/shared-types';
 import { TEMPLATE_OPTIONS } from '../side-panel/labels.js';
 
 const SETTINGS_KEY = 'noteseed_settings_v1';
 
-type TabId = 'general' | 'account' | 'credentials' | 'about';
+type TabId = 'general' | 'ai' | 'account' | 'credentials' | 'about';
+
+type AIProviderBlob = {
+  provider: AIProviderType;
+  apiKey: string;
+  baseUrl: string;
+  fastModel: string;
+  powerfulModel: string;
+};
 
 type SettingsBlob = {
   defaultTemplate: string;
@@ -15,10 +23,19 @@ type SettingsBlob = {
   feishu: { appId: string; appSecret: string };
   get: { token: string };
   ksdoc: { token: string };
+  aiProvider: AIProviderBlob;
 };
 
 type AccountBlob = {
   email: string | null;
+};
+
+const DEFAULT_AI_PROVIDER: AIProviderBlob = {
+  provider: 'anthropic',
+  apiKey: '',
+  baseUrl: '',
+  fastModel: DEFAULT_ANTHROPIC_MODELS.fast,
+  powerfulModel: DEFAULT_ANTHROPIC_MODELS.powerful,
 };
 
 const DEFAULT_SETTINGS: SettingsBlob = {
@@ -29,6 +46,7 @@ const DEFAULT_SETTINGS: SettingsBlob = {
   feishu: { appId: '', appSecret: '' },
   get: { token: '' },
   ksdoc: { token: '' },
+  aiProvider: { ...DEFAULT_AI_PROVIDER },
 };
 
 const TARGET_LABEL: Record<SaveTarget, string> = {
@@ -36,6 +54,48 @@ const TARGET_LABEL: Record<SaveTarget, string> = {
   feishu: '飞书',
   get: 'Get',
   ksdoc: '金山',
+};
+
+const PROVIDER_PRESETS: Record<
+  string,
+  { label: string; baseUrl: string; fast: string; powerful: string }
+> = {
+  anthropic: {
+    label: 'Anthropic (Claude)',
+    baseUrl: '',
+    fast: DEFAULT_ANTHROPIC_MODELS.fast,
+    powerful: DEFAULT_ANTHROPIC_MODELS.powerful,
+  },
+  openai: {
+    label: 'OpenAI (GPT)',
+    baseUrl: 'https://api.openai.com/v1',
+    fast: DEFAULT_OPENAI_MODELS.fast,
+    powerful: DEFAULT_OPENAI_MODELS.powerful,
+  },
+  'openai-deepseek': {
+    label: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    fast: 'deepseek-chat',
+    powerful: 'deepseek-chat',
+  },
+  'openai-moonshot': {
+    label: 'Moonshot (月之暗面)',
+    baseUrl: 'https://api.moonshot.cn/v1',
+    fast: 'moonshot-v1-8k',
+    powerful: 'moonshot-v1-32k',
+  },
+  'openai-zhipu': {
+    label: '智谱 (GLM)',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    fast: 'glm-4-flash',
+    powerful: 'glm-4-plus',
+  },
+  'openai-custom': {
+    label: '自定义 OpenAI 兼容',
+    baseUrl: '',
+    fast: '',
+    powerful: '',
+  },
 };
 
 function cn(...parts: (string | false | undefined)[]): string {
@@ -55,7 +115,15 @@ export function App() {
       const s = raw[SETTINGS_KEY] as Partial<SettingsBlob> | undefined;
       const a = raw.noteseed_account as AccountBlob | undefined;
       if (s) {
-        setSettings({ ...DEFAULT_SETTINGS, ...s, memos: { ...DEFAULT_SETTINGS.memos, ...s.memos }, feishu: { ...DEFAULT_SETTINGS.feishu, ...s.feishu }, get: { ...DEFAULT_SETTINGS.get, ...s.get }, ksdoc: { ...DEFAULT_SETTINGS.ksdoc, ...s.ksdoc } });
+        setSettings({
+          ...DEFAULT_SETTINGS,
+          ...s,
+          memos: { ...DEFAULT_SETTINGS.memos, ...s.memos },
+          feishu: { ...DEFAULT_SETTINGS.feishu, ...s.feishu },
+          get: { ...DEFAULT_SETTINGS.get, ...s.get },
+          ksdoc: { ...DEFAULT_SETTINGS.ksdoc, ...s.ksdoc },
+          aiProvider: { ...DEFAULT_AI_PROVIDER, ...s.aiProvider },
+        });
       }
       if (a?.email !== undefined) setAccount(a);
       setLoaded(true);
@@ -67,10 +135,36 @@ export function App() {
     void chrome.storage.local.set({ [SETTINGS_KEY]: next });
   }, []);
 
+  const flash = (msg: string) => {
+    setStatusLine(msg);
+    window.setTimeout(() => setStatusLine(null), 2500);
+  };
+
   const onSaveGeneral = () => {
     persistSettings(settings);
-    setStatusLine('已保存通用设置');
-    window.setTimeout(() => setStatusLine(null), 2500);
+    flash('已保存通用设置');
+  };
+
+  const onSaveAI = () => {
+    persistSettings(settings);
+    flash('已保存 AI 配置');
+  };
+
+  const onPresetChange = (presetKey: string) => {
+    const preset = PROVIDER_PRESETS[presetKey];
+    if (!preset) return;
+    const provider: AIProviderType =
+      presetKey === 'anthropic' ? 'anthropic' : 'openai';
+    setSettings((s) => ({
+      ...s,
+      aiProvider: {
+        ...s.aiProvider,
+        provider,
+        baseUrl: preset.baseUrl,
+        fastModel: preset.fast,
+        powerfulModel: preset.powerful,
+      },
+    }));
   };
 
   const testMemos = async () => {
@@ -137,18 +231,32 @@ export function App() {
     );
   }
 
+  const inputCls =
+    'w-full rounded-md border border-stone-200 px-3 py-2 font-mono text-sm focus:border-seed focus:outline-none focus:ring-1 focus:ring-seed dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100';
+  const selectCls =
+    'w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm focus:border-seed focus:outline-none focus:ring-1 focus:ring-seed dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100';
+  const labelCls = 'mb-1 block text-stone-600 dark:text-stone-400';
+  const btnPrimary =
+    'rounded-md bg-seed px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-seed/90 dark:shadow-none';
+  const btnSecondary =
+    'rounded-md border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-800';
+
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 dark:bg-stone-950 dark:text-stone-100">
       <div className="mx-auto max-w-3xl px-4 py-6">
         <header className="mb-6 border-b border-stone-200 pb-4 dark:border-stone-800">
           <h1 className="text-2xl font-semibold text-seed dark:text-emerald-400">NoteSeed 设置</h1>
-          <p className="mt-1 text-sm text-soil dark:text-amber-200/90">配置模板、账号与第三方凭证</p>
+          <p className="mt-1 text-sm text-soil dark:text-amber-200/90">配置模板、AI 提供者、账号与第三方凭证</p>
         </header>
 
-        <nav className="mb-6 flex flex-wrap gap-1 rounded-lg border border-stone-200 bg-white p-1 dark:border-stone-800 dark:bg-stone-900/80" aria-label="设置分区">
+        <nav
+          className="mb-6 flex flex-wrap gap-1 rounded-lg border border-stone-200 bg-white p-1 dark:border-stone-800 dark:bg-stone-900/80"
+          aria-label="设置分区"
+        >
           {(
             [
               ['general', '通用'],
+              ['ai', 'AI 模型'],
               ['account', '账号'],
               ['credentials', '凭证'],
               ['about', '关于'],
@@ -161,7 +269,7 @@ export function App() {
                 'rounded-md px-3 py-2 text-sm font-medium transition',
                 tab === id
                   ? 'bg-seed text-white shadow-sm dark:bg-emerald-800'
-                  : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'
+                  : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800',
               )}
               onClick={() => setTab(id)}
             >
@@ -176,13 +284,14 @@ export function App() {
           </div>
         ) : null}
 
+        {/* ── 通用 ── */}
         {tab === 'general' ? (
           <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900/60">
             <h2 className="text-lg font-medium text-stone-900 dark:text-stone-100">通用</h2>
             <label className="block text-sm">
-              <span className="mb-1 block text-stone-600 dark:text-stone-400">默认模板</span>
+              <span className={labelCls}>默认模板</span>
               <select
-                className="w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm focus:border-seed focus:outline-none focus:ring-1 focus:ring-seed dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+                className={selectCls}
                 value={settings.defaultTemplate}
                 onChange={(e) => setSettings((s) => ({ ...s, defaultTemplate: e.target.value }))}
               >
@@ -213,9 +322,9 @@ export function App() {
             </div>
 
             <label className="block text-sm">
-              <span className="mb-1 block text-stone-600 dark:text-stone-400">输出语言</span>
+              <span className={labelCls}>输出语言</span>
               <select
-                className="w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm focus:border-seed focus:outline-none focus:ring-1 focus:ring-seed dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+                className={selectCls}
                 value={settings.outputLanguage}
                 onChange={(e) => setSettings((s) => ({ ...s, outputLanguage: e.target.value }))}
               >
@@ -224,16 +333,153 @@ export function App() {
               </select>
             </label>
 
-            <button
-              type="button"
-              className="rounded-md bg-seed px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-seed/90 dark:shadow-none"
-              onClick={onSaveGeneral}
-            >
+            <button type="button" className={btnPrimary} onClick={onSaveGeneral}>
               保存
             </button>
           </section>
         ) : null}
 
+        {/* ── AI 模型 ── */}
+        {tab === 'ai' ? (
+          <section className="space-y-5 rounded-xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900/60">
+            <div>
+              <h2 className="text-lg font-medium text-stone-900 dark:text-stone-100">AI 模型配置</h2>
+              <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+                选择 AI 提供者并配置 API 密钥。支持 Anthropic 和所有 OpenAI 协议兼容的服务。
+              </p>
+            </div>
+
+            <label className="block text-sm">
+              <span className={labelCls}>快速选择</span>
+              <select
+                className={selectCls}
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) onPresetChange(e.target.value);
+                }}
+              >
+                <option value="">-- 选择预设 --</option>
+                {Object.entries(PROVIDER_PRESETS).map(([key, { label }]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block text-sm">
+              <span className={labelCls}>协议类型</span>
+              <select
+                className={selectCls}
+                value={settings.aiProvider.provider}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    aiProvider: { ...s.aiProvider, provider: e.target.value as AIProviderType },
+                  }))
+                }
+              >
+                <option value="anthropic">Anthropic 协议</option>
+                <option value="openai">OpenAI 协议</option>
+              </select>
+            </label>
+
+            <label className="block text-sm">
+              <span className={labelCls}>API Key</span>
+              <input
+                type="password"
+                className={inputCls}
+                autoComplete="off"
+                placeholder={
+                  settings.aiProvider.provider === 'anthropic'
+                    ? 'sk-ant-...'
+                    : 'sk-...'
+                }
+                value={settings.aiProvider.apiKey}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    aiProvider: { ...s.aiProvider, apiKey: e.target.value },
+                  }))
+                }
+              />
+            </label>
+
+            <label className="block text-sm">
+              <span className={labelCls}>
+                API Base URL
+                <span className="ml-1 text-xs text-stone-400">
+                  {settings.aiProvider.provider === 'anthropic'
+                    ? '(留空使用官方 api.anthropic.com)'
+                    : '(留空使用 api.openai.com/v1)'}
+                </span>
+              </span>
+              <input
+                className={inputCls}
+                placeholder={
+                  settings.aiProvider.provider === 'anthropic'
+                    ? 'https://api.anthropic.com'
+                    : 'https://api.openai.com/v1'
+                }
+                value={settings.aiProvider.baseUrl}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    aiProvider: { ...s.aiProvider, baseUrl: e.target.value },
+                  }))
+                }
+              />
+            </label>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="block text-sm">
+                <span className={labelCls}>
+                  快速模型 <span className="text-xs text-stone-400">(分类/标签/元数据)</span>
+                </span>
+                <input
+                  className={inputCls}
+                  placeholder="e.g. gpt-4o-mini"
+                  value={settings.aiProvider.fastModel}
+                  onChange={(e) =>
+                    setSettings((s) => ({
+                      ...s,
+                      aiProvider: { ...s.aiProvider, fastModel: e.target.value },
+                    }))
+                  }
+                />
+              </label>
+              <label className="block text-sm">
+                <span className={labelCls}>
+                  强力模型 <span className="text-xs text-stone-400">(内容蒸馏)</span>
+                </span>
+                <input
+                  className={inputCls}
+                  placeholder="e.g. gpt-4o"
+                  value={settings.aiProvider.powerfulModel}
+                  onChange={(e) =>
+                    setSettings((s) => ({
+                      ...s,
+                      aiProvider: { ...s.aiProvider, powerfulModel: e.target.value },
+                    }))
+                  }
+                />
+              </label>
+            </div>
+
+            <div className="rounded-lg border border-stone-100 bg-stone-50 p-3 text-xs text-stone-500 dark:border-stone-800 dark:bg-stone-900/40 dark:text-stone-400">
+              <p className="font-medium text-stone-700 dark:text-stone-300">兼容的 OpenAI 协议服务商：</p>
+              <p className="mt-1">
+                OpenAI / DeepSeek / Moonshot / 智谱 GLM / 通义千问 / Ollama / vLLM / LM Studio / Azure OpenAI 等
+              </p>
+            </div>
+
+            <button type="button" className={btnPrimary} onClick={onSaveAI}>
+              保存 AI 配置
+            </button>
+          </section>
+        ) : null}
+
+        {/* ── 账号 ── */}
         {tab === 'account' ? (
           <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900/60">
             <h2 className="text-lg font-medium text-stone-900 dark:text-stone-100">账号</h2>
@@ -268,6 +514,7 @@ export function App() {
           </section>
         ) : null}
 
+        {/* ── 凭证 ── */}
         {tab === 'credentials' ? (
           <section className="space-y-6 rounded-xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900/60">
             <h2 className="text-lg font-medium text-stone-900 dark:text-stone-100">凭证</h2>
@@ -275,9 +522,9 @@ export function App() {
             <div className="space-y-3 rounded-lg border border-stone-100 p-4 dark:border-stone-800">
               <h3 className="text-sm font-semibold text-stone-800 dark:text-stone-200">Memos</h3>
               <label className="block text-sm">
-                <span className="mb-1 block text-stone-600 dark:text-stone-400">Base URL</span>
+                <span className={labelCls}>Base URL</span>
                 <input
-                  className="w-full rounded-md border border-stone-200 px-3 py-2 font-mono text-sm focus:border-seed focus:outline-none focus:ring-1 focus:ring-seed dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+                  className={inputCls}
                   placeholder="https://memos.example.com"
                   value={settings.memos.baseUrl}
                   onChange={(e) =>
@@ -286,10 +533,10 @@ export function App() {
                 />
               </label>
               <label className="block text-sm">
-                <span className="mb-1 block text-stone-600 dark:text-stone-400">Token</span>
+                <span className={labelCls}>Token</span>
                 <input
                   type="password"
-                  className="w-full rounded-md border border-stone-200 px-3 py-2 font-mono text-sm focus:border-seed focus:outline-none focus:ring-1 focus:ring-seed dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+                  className={inputCls}
                   autoComplete="off"
                   value={settings.memos.token}
                   onChange={(e) =>
@@ -306,11 +553,7 @@ export function App() {
                 >
                   {testing === 'memos' ? '测试中…' : '测试连接'}
                 </button>
-                <button
-                  type="button"
-                  className="rounded-md border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-800"
-                  onClick={() => persistSettings(settings)}
-                >
+                <button type="button" className={btnSecondary} onClick={() => persistSettings(settings)}>
                   保存 Memos 配置
                 </button>
               </div>
@@ -319,9 +562,9 @@ export function App() {
             <div className="space-y-3 rounded-lg border border-stone-100 p-4 dark:border-stone-800">
               <h3 className="text-sm font-semibold text-stone-800 dark:text-stone-200">飞书</h3>
               <label className="block text-sm">
-                <span className="mb-1 block text-stone-600 dark:text-stone-400">App ID</span>
+                <span className={labelCls}>App ID</span>
                 <input
-                  className="w-full rounded-md border border-stone-200 px-3 py-2 font-mono text-sm focus:border-seed focus:outline-none focus:ring-1 focus:ring-seed dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+                  className={inputCls}
                   value={settings.feishu.appId}
                   onChange={(e) =>
                     setSettings((s) => ({ ...s, feishu: { ...s.feishu, appId: e.target.value } }))
@@ -329,14 +572,17 @@ export function App() {
                 />
               </label>
               <label className="block text-sm">
-                <span className="mb-1 block text-stone-600 dark:text-stone-400">App Secret</span>
+                <span className={labelCls}>App Secret</span>
                 <input
                   type="password"
-                  className="w-full rounded-md border border-stone-200 px-3 py-2 font-mono text-sm focus:border-seed focus:outline-none focus:ring-1 focus:ring-seed dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+                  className={inputCls}
                   autoComplete="off"
                   value={settings.feishu.appSecret}
                   onChange={(e) =>
-                    setSettings((s) => ({ ...s, feishu: { ...s.feishu, appSecret: e.target.value } }))
+                    setSettings((s) => ({
+                      ...s,
+                      feishu: { ...s.feishu, appSecret: e.target.value },
+                    }))
                   }
                 />
               </label>
@@ -349,11 +595,7 @@ export function App() {
                 >
                   {testing === 'feishu' ? '测试中…' : '测试连接'}
                 </button>
-                <button
-                  type="button"
-                  className="rounded-md border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50 dark:border-stone-700 dark:hover:bg-stone-800"
-                  onClick={() => persistSettings(settings)}
-                >
+                <button type="button" className={btnSecondary} onClick={() => persistSettings(settings)}>
                   保存飞书配置
                 </button>
               </div>
@@ -365,6 +607,7 @@ export function App() {
           </section>
         ) : null}
 
+        {/* ── 关于 ── */}
         {tab === 'about' ? (
           <section className="space-y-3 rounded-xl border border-stone-200 bg-white p-5 shadow-sm dark:border-stone-800 dark:bg-stone-900/60">
             <h2 className="text-lg font-medium text-stone-900 dark:text-stone-100">关于</h2>

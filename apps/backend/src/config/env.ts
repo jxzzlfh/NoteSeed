@@ -10,7 +10,7 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRES: z.string().default('1h'),
   JWT_REFRESH_EXPIRES: z.string().default('30d'),
   CREDENTIAL_ENCRYPTION_KEY: z.string().min(32),
-  ANTHROPIC_API_KEY: z.string().min(1),
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().optional(),
   FEISHU_APP_ID: z.string().optional(),
   FEISHU_APP_SECRET: z.string().optional(),

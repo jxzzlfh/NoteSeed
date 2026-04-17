@@ -1,7 +1,7 @@
 import type { PageSenseOutput, PageSource } from '@noteseed/shared-types';
 
 import { callClaudeStructured } from '../llm/structured.js';
-import { MODELS } from '../llm/models.js';
+import { getFastModel } from '../llm/models.js';
 import { PAGE_SENSE_SYSTEM_PROMPT, pageSenseStructuredSchema } from './prompt.js';
 import { detectByDomain, detectByDOM, detectByKeywords } from './signals.js';
 
@@ -50,7 +50,7 @@ export async function run(input: PageSource): Promise<PageSenseOutput> {
 
   const parsed = await callClaudeStructured(
     {
-      model: MODELS.HAIKU,
+      model: getFastModel(),
       systemPrompt: PAGE_SENSE_SYSTEM_PROMPT,
       userPrompt,
       temperature: 0.2,

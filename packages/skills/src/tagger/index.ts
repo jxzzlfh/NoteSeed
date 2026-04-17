@@ -1,6 +1,6 @@
 import type { TaggerOutput } from '@noteseed/shared-types';
 
-import { callClaudeWithTool, MODELS } from '../llm/index.js';
+import { callClaudeWithTool, getFastModel } from '../llm/index.js';
 
 import { buildUserPrompt, outputSchema, systemPrompt } from './prompt.js';
 
@@ -23,7 +23,7 @@ function coerceTags(raw: Record<string, unknown>): string[] {
 
 export async function run(input: TaggerInput): Promise<TaggerOutput> {
   const raw = await callClaudeWithTool({
-    model: MODELS.HAIKU,
+    model: getFastModel(),
     systemPrompt,
     userPrompt: buildUserPrompt(input),
     toolName: TAGGER_TOOL,

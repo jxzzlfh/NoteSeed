@@ -1,5 +1,4 @@
-import { callClaudeWithTool, MODELS } from '../llm/index.js';
-import type { Tool } from '@anthropic-ai/sdk/resources/messages.js';
+import { callClaudeWithTool, getPowerfulModel } from '../llm/index.js';
 
 import * as docPrompt from './prompts/doc.js';
 import * as genericPrompt from './prompts/generic.js';
@@ -34,7 +33,7 @@ export interface DistillerOutput {
 type PromptModule = {
   systemPrompt: string;
   buildUserPrompt: (input: DistillerInput) => string;
-  outputSchema: Tool.InputSchema;
+  outputSchema: Record<string, unknown>;
 };
 
 const PROMPT_MAP: Record<string, PromptModule> = {
@@ -122,7 +121,7 @@ export async function run(input: DistillerInput): Promise<DistillerOutput> {
   const kind = PROMPT_MAP[input.pageType] ? input.pageType : 'generic';
 
   const raw = await callClaudeWithTool({
-    model: MODELS.SONNET,
+    model: getPowerfulModel(),
     systemPrompt: mod.systemPrompt,
     userPrompt: mod.buildUserPrompt(input),
     toolName: DISTILLER_TOOL,

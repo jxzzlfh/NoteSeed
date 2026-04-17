@@ -1,12 +1,10 @@
-import type Anthropic from '@anthropic-ai/sdk';
-import type { Tool } from '@anthropic-ai/sdk/resources/messages.js';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import type { CallClaudeParams } from './client.js';
-import { runAnthropicMessagesCreate } from './client.js';
-
-const DEFAULT_TOOL_NAME = 'emit_structured_json';
+import type { LLMCallParams } from './provider.js';
+import { getActiveProvider } from './provider.js';
+import { configFromEnv, createProvider } from './factory.js';
+import type { LLMProvider } from './provider.js';
 
 function stripJsonSchemaMeta(schema: Record<string, unknown>): Record<string, unknown> {
   const { $schema, definitions, ...rest } = schema;
@@ -15,34 +13,33 @@ function stripJsonSchemaMeta(schema: Record<string, unknown>): Record<string, un
   return rest;
 }
 
-function extractToolInput(
-  content: Anthropic.Messages.ContentBlock[],
-  toolName: string,
-): unknown {
-  for (const block of content) {
-    if (block.type === 'tool_use' && block.name === toolName) {
-      return block.input;
-    }
+function resolveProvider(): LLMProvider {
+  const active = getActiveProvider();
+  if (active) return active;
+
+  const envConfig = configFromEnv();
+  if (!envConfig) {
+    throw new Error(
+      'No AI provider configured. Set ANTHROPIC_API_KEY or configure a custom provider.',
+    );
   }
-  return undefined;
+  return createProvider(envConfig);
 }
 
 export interface CallClaudeStructuredOptions {
-  /** Anthropic tool name (default: emit_structured_json) */
   toolName?: string;
-  /** Short description for the tool (helps model compliance) */
   toolDescription?: string;
 }
 
 /**
- * Calls Claude with a forced `tool_use` block and validates the payload with Zod.
+ * Calls the active LLM with a forced tool call and validates the payload with Zod.
  */
 export async function callClaudeStructured<T>(
-  params: CallClaudeParams,
+  params: LLMCallParams,
   toolSchema: z.ZodType<T>,
   options?: CallClaudeStructuredOptions,
 ): Promise<T> {
-  const toolName = options?.toolName ?? DEFAULT_TOOL_NAME;
+  const toolName = options?.toolName ?? 'emit_structured_json';
   const toolDescription =
     options?.toolDescription ?? 'Emit the structured JSON result as valid tool input.';
 
@@ -50,33 +47,14 @@ export async function callClaudeStructured<T>(
     target: 'jsonSchema7',
     $refStrategy: 'none',
   }) as Record<string, unknown>;
-  const inputSchema = stripJsonSchemaMeta(rawSchema) as Tool.InputSchema;
+  const inputSchema = stripJsonSchemaMeta(rawSchema);
 
-  const { model, systemPrompt, userPrompt, temperature, maxTokens } = params;
-  const maxTokensResolved = maxTokens ?? 4096;
-
-  const response = await runAnthropicMessagesCreate({
-    model,
-    max_tokens: maxTokensResolved,
-    system: systemPrompt,
-    temperature,
-    messages: [{ role: 'user', content: userPrompt }],
-    tools: [
-      {
-        name: toolName,
-        description: toolDescription,
-        input_schema: inputSchema,
-      },
-    ],
-    tool_choice: { type: 'tool', name: toolName, disable_parallel_tool_use: true },
+  const provider = resolveProvider();
+  const rawInput = await provider.chatWithTool(params, {
+    name: toolName,
+    description: toolDescription,
+    inputSchema,
   });
-
-  const rawInput = extractToolInput(response.content, toolName);
-  if (rawInput === undefined) {
-    throw new Error(
-      'callClaudeStructured: model did not return a matching tool_use block',
-    );
-  }
 
   const parsed = toolSchema.safeParse(rawInput);
   if (!parsed.success) {
@@ -97,14 +75,13 @@ export interface CallClaudeWithToolParams {
   userPrompt: string;
   toolName: string;
   toolDescription: string;
-  inputSchema: Tool.InputSchema;
+  inputSchema: Record<string, unknown>;
   temperature?: number;
   maxTokens?: number;
 }
 
 /**
- * Calls Claude with a single forced `tool_use` and returns the tool input object (unvalidated JSON).
- * Used when the schema is already an Anthropic `input_schema` (e.g. Distiller, Tagger).
+ * Calls the active LLM with a single forced tool call and returns the raw JSON object.
  */
 export async function callClaudeWithTool(
   params: CallClaudeWithToolParams,
@@ -120,31 +97,9 @@ export async function callClaudeWithTool(
     maxTokens,
   } = params;
 
-  const response = await runAnthropicMessagesCreate({
-    model,
-    max_tokens: maxTokens ?? 4096,
-    system: systemPrompt,
-    temperature,
-    messages: [{ role: 'user', content: userPrompt }],
-    tools: [
-      {
-        name: toolName,
-        description: toolDescription,
-        input_schema: inputSchema,
-      },
-    ],
-    tool_choice: { type: 'tool', name: toolName, disable_parallel_tool_use: true },
-  });
-
-  const rawInput = extractToolInput(response.content, toolName);
-  if (rawInput === null || rawInput === undefined) {
-    throw new Error(
-      `callClaudeWithTool: model did not return a matching tool_use block for "${toolName}"`,
-    );
-  }
-  if (typeof rawInput !== 'object' || Array.isArray(rawInput)) {
-    throw new Error('callClaudeWithTool: tool input must be a JSON object');
-  }
-
-  return rawInput as Record<string, unknown>;
+  const provider = resolveProvider();
+  return provider.chatWithTool(
+    { model, systemPrompt, userPrompt, temperature, maxTokens },
+    { name: toolName, description: toolDescription, inputSchema },
+  );
 }

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { ContextualizerOutput, PageSource } from '@noteseed/shared-types';
 
 import { callClaudeStructured } from '../llm/structured.js';
-import { MODELS } from '../llm/models.js';
+import { getFastModel } from '../llm/models.js';
 import { detectLanguageLabel, estimateReadingTime } from './reading-time.js';
 
 const CONTEXTUALIZER_SYSTEM_PROMPT = `You infer publication metadata from a short plain-text excerpt of a web page.
@@ -76,7 +76,7 @@ export async function run(input: PageSource): Promise<ContextualizerOutput> {
 
   const inferred = await callClaudeStructured(
     {
-      model: MODELS.HAIKU,
+      model: getFastModel(),
       systemPrompt: CONTEXTUALIZER_SYSTEM_PROMPT,
       userPrompt,
       temperature: 0.1,

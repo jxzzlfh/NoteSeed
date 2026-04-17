@@ -4,6 +4,7 @@ import type {
   CardAnalysis,
   PipelineTimings,
   CardFields,
+  AIProviderConfig,
 } from '@noteseed/shared-types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -12,6 +13,9 @@ import { run as runContextualizer } from '../contextualizer/index.js';
 import { run as runDistiller } from '../distiller/index.js';
 import { run as runTagger } from '../tagger/index.js';
 import { run as runCardwright } from '../cardwright/index.js';
+import { setActiveProvider, clearActiveProvider } from '../llm/provider.js';
+import { setActiveModels, clearActiveModels } from '../llm/models.js';
+import { createProvider } from '../llm/factory.js';
 
 async function timed<T>(fn: () => Promise<T>): Promise<{ result: T; ms: number }> {
   const start = performance.now();
@@ -24,6 +28,8 @@ export interface GenerateCardOptions {
   retentionLevel?: 'minimal' | 'standard' | 'detailed';
   target?: string;
   userTagHistory?: string[];
+  /** Custom AI provider config — overrides env-based defaults */
+  aiProvider?: AIProviderConfig;
 }
 
 export interface GenerateCardResult {
@@ -34,10 +40,32 @@ export interface GenerateCardResult {
 /**
  * Orchestrate the full Skills pipeline: PageSense → Contextualizer → Distiller → Tagger → Cardwright.
  * Includes degradation paths for each step.
+ *
+ * When `options.aiProvider` is supplied, all LLM calls in this pipeline invocation
+ * use that provider/model config instead of environment defaults.
  */
 export async function generateCard(
   source: PageSource,
   options: GenerateCardOptions = {},
+): Promise<GenerateCardResult> {
+  if (options.aiProvider) {
+    setActiveProvider(createProvider(options.aiProvider));
+    setActiveModels(options.aiProvider.models);
+  }
+
+  try {
+    return await runPipeline(source, options);
+  } finally {
+    if (options.aiProvider) {
+      clearActiveProvider();
+      clearActiveModels();
+    }
+  }
+}
+
+async function runPipeline(
+  source: PageSource,
+  options: GenerateCardOptions,
 ): Promise<GenerateCardResult> {
   const totalStart = performance.now();
   const timings: PipelineTimings = {
@@ -49,7 +77,6 @@ export async function generateCard(
     total_ms: 0,
   };
 
-  // Step 1: PageSense — classify page type
   let pageType = 'resource';
   let confidence = 0;
   let suggestedTemplate = 'generic-v1';
@@ -61,11 +88,9 @@ export async function generateCard(
     confidence = ps.result.confidence;
     suggestedTemplate = ps.result.suggestedTemplate;
   } catch {
-    // Degrade: use generic template
     timings.pageSense_ms = Math.round(performance.now() - totalStart);
   }
 
-  // Step 2: Contextualizer — enrich metadata
   let author = source.metadata.author;
   let publishedAt = source.metadata.publishedAt;
 
@@ -78,7 +103,6 @@ export async function generateCard(
     timings.contextualizer_ms = 0;
   }
 
-  // Step 3: Distiller — structured extraction
   let summary = '';
   let fields: CardFields = {};
 
@@ -98,7 +122,6 @@ export async function generateCard(
     timings.distiller_ms = 0;
   }
 
-  // Step 4: Tagger — generate tags
   let tags: string[] = [];
   let category: string | undefined;
 
@@ -118,7 +141,6 @@ export async function generateCard(
     timings.tagger_ms = 0;
   }
 
-  // Step 5: Cardwright — render Markdown
   const analysis: CardAnalysis = {
     pageType: pageType as CardAnalysis['pageType'],
     confidence,
