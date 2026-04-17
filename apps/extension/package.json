@@ -1,0 +1,46 @@
+{
+  "name": "@noteseed/extension",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "icons": "tsx ./icons/generate-icons.ts",
+    "prebuild": "pnpm run icons",
+    "build": "vite build",
+    "build:zip": "pnpm run build && cd dist && tar -acf ../noteseed-extension.zip .",
+    "dev": "vite",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "@noteseed/shared-types": "workspace:*",
+    "dexie": "^4.0.10",
+    "dompurify": "^3.4.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.0.0",
+    "remark-gfm": "^4.0.0",
+    "turndown": "^7.2.4",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "beta",
+    "@types/chrome": "^0.0.287",
+    "@types/dompurify": "^3.2.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/turndown": "^5.0.6",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "pngjs": "^7.0.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8"
+  }
+}
