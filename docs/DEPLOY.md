@@ -8,44 +8,49 @@
 |------|:----:|------|
 | `DATABASE_URL` | ✅ | PostgreSQL 连接串 |
 | `CREDENTIAL_ENCRYPTION_KEY` | ✅ | AES-256 密钥（Base64，≥32 字符） |
-| `FEISHU_APP_ID` | | 飞书应用 ID（使用飞书适配器时需要） |
-| `FEISHU_APP_SECRET` | | 飞书应用 Secret |
 | `NODE_ENV` | | `production` / `development` |
 | `PORT` | | 服务端口（默认 3000） |
 | `LOG_LEVEL` | | 日志级别（默认 info） |
 
 > AI API Key 无需在服务端配置 — 用户在扩展设置页的「AI 模型」Tab 中填写，每次请求随报文传入后端。
 
-### Docker 部署
+### Docker Compose 部署（推荐）
+
+项目自带的 `docker-compose.yml` 包含 **PostgreSQL + Backend** 两个服务，一条命令启动：
 
 ```bash
-# 构建镜像
-docker build -f apps/backend/Dockerfile -t noteseed-backend:1.0.0 .
+# 配置加密密钥（首次）
+export CREDENTIAL_ENCRYPTION_KEY=$(openssl rand -base64 32)
 
-# 启动 PostgreSQL
-docker compose up -d postgres
+# 启动 PostgreSQL + Backend
+docker compose up -d
 
 # 运行数据库迁移
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/noteseed" \
-  npx prisma migrate deploy --schema apps/backend/prisma/schema.prisma
+docker exec -it noteseed-backend sh -c \
+  "cd /app/apps/backend && npx prisma migrate deploy"
+```
 
-# 启动后端
-docker run -d \
-  --name noteseed-backend \
-  --network host \
-  -e DATABASE_URL="postgresql://postgres:postgres@localhost:5432/noteseed" \
-  -e CREDENTIAL_ENCRYPTION_KEY="your-base64-key" \
-  -p 3000:3000 \
-  noteseed-backend:1.0.0
+启动后：
+- **PostgreSQL** 运行在 `5432` 端口
+- **Backend** 运行在 `3000` 端口
+
+### 单独构建镜像
+
+如需手动构建：
+
+```bash
+docker build -f apps/backend/Dockerfile -t noteseed-backend:1.0.0 .
 ```
 
 > 更详细的云服务器部署教程见 → [1Panel 部署教程](./DEPLOY-1PANEL.md)
 
-### 本地开发
+### 本地源码开发
+
+如需调试后端源码（不用 Docker 容器里的后端）：
 
 ```bash
-# 启动 PostgreSQL
-docker compose up -d
+# 只启动 PostgreSQL 容器
+docker compose up -d postgres
 
 # 复制环境变量
 cp .env.example .env
@@ -54,7 +59,7 @@ cp .env.example .env
 # 数据库初始化
 pnpm --filter @noteseed/backend exec prisma migrate dev
 
-# 启动后端
+# 启动后端（源码模式）
 pnpm --filter @noteseed/backend dev
 ```
 

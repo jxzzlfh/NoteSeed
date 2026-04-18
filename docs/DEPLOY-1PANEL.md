@@ -194,8 +194,6 @@ docker compose version
 
 ```bash
 cat > /opt/noteseed/docker-compose.prod.yml << 'YAML'
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16
