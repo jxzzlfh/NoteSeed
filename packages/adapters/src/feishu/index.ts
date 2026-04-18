@@ -31,7 +31,7 @@ function docTitle(req: AdapterSaveRequest): string {
 }
 
 export class FeishuAdapter implements Adapter {
-  readonly target: SaveTarget = 'feishu';
+  readonly target = 'feishu' as SaveTarget;
 
   async validate(credential: unknown): Promise<boolean> {
     if (!isFeishuCredential(credential)) return false;

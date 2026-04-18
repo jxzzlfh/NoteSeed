@@ -45,10 +45,10 @@ export async function createMemo(
 }
 
 /**
- * GET /api/v1/users/me — validates token
+ * GET /api/v1/auth/me — validates token (GetCurrentUser)
  */
 export async function validateToken(baseUrl: string, token: string): Promise<boolean> {
-  const url = `${normalizeBaseUrl(baseUrl)}/api/v1/users/me`;
+  const url = `${normalizeBaseUrl(baseUrl)}/api/v1/auth/me`;
   const res = await fetch(url, {
     method: 'GET',
     headers: {

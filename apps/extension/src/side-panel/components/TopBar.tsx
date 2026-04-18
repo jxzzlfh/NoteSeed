@@ -4,13 +4,13 @@ type TopBarProps = {
 
 export function TopBar({ pageTypeLabel }: TopBarProps) {
   return (
-    <header className="flex shrink-0 items-center justify-between gap-2 border-b border-stone-200 bg-white/90 px-3 py-2 backdrop-blur dark:border-stone-700 dark:bg-stone-900/90">
+    <header className="flex shrink-0 items-center justify-between gap-2 border-b border-stone-200 bg-white px-3.5 py-2.5">
       <div className="flex min-w-0 items-center gap-2">
-        <span className="truncate text-sm font-semibold text-seed dark:text-emerald-400" title="NoteSeed">
-          🌱 NoteSeed
+        <span className="text-sm font-bold tracking-tight text-seed">
+          NoteSeed
         </span>
         <span
-          className="inline-flex max-w-[8rem] shrink-0 items-center rounded-full border border-soil/30 bg-soil/10 px-2 py-0.5 text-[11px] font-medium text-soil dark:border-amber-700/40 dark:bg-amber-900/30 dark:text-amber-200"
+          className="inline-flex max-w-[8rem] shrink-0 items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-soil ring-1 ring-inset ring-amber-200/60"
           title="页面类型"
         >
           {pageTypeLabel}
@@ -18,7 +18,7 @@ export function TopBar({ pageTypeLabel }: TopBarProps) {
       </div>
       <button
         type="button"
-        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-stone-500 transition hover:bg-stone-100 hover:text-seed dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-emerald-400"
+        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-stone-400 transition hover:bg-stone-100 hover:text-stone-600"
         title="设置"
         aria-label="打开设置"
         onClick={() => void chrome.runtime.openOptionsPage()}
@@ -28,8 +28,8 @@ export function TopBar({ pageTypeLabel }: TopBarProps) {
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2"
-          className="h-5 w-5"
+          strokeWidth="1.8"
+          className="h-[18px] w-[18px]"
           aria-hidden
         >
           <path

@@ -21,9 +21,11 @@ const GenerateBodySchema = z.object({
   options: z
     .object({
       preferredTemplate: z.string().optional(),
+      customPrompt: z.string().max(500).optional(),
       retentionLevel: z.enum(['minimal', 'standard', 'detailed']).optional(),
       target: z.string().optional(),
       userTagHistory: z.array(z.string()).optional(),
+      aiProvider: AIProviderSchema.optional(),
     })
     .optional(),
 });
@@ -64,10 +66,14 @@ export async function cardsGenerateRoute(app: FastifyInstance) {
       const start = performance.now();
 
       try {
-        const aiProvider = await resolveAIProvider(request.user.userId);
+        // Priority: inline options.aiProvider > DB > env fallback
+        const aiProvider =
+          options?.aiProvider ?? (await resolveAIProvider(request.user.userId));
 
+        const { aiProvider: _ignored, ...restOptions } = options ?? {};
+        void _ignored;
         const result = await generateCard(source, {
-          ...options,
+          ...restOptions,
           aiProvider,
         });
 

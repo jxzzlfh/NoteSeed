@@ -5,10 +5,6 @@ dotenv.config();
 
 const envSchema = z.object({
   DATABASE_URL: z.string().url(),
-  REDIS_URL: z.string().url(),
-  JWT_SECRET: z.string().min(16),
-  JWT_ACCESS_EXPIRES: z.string().default('1h'),
-  JWT_REFRESH_EXPIRES: z.string().default('30d'),
   CREDENTIAL_ENCRYPTION_KEY: z.string().min(32),
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().optional(),

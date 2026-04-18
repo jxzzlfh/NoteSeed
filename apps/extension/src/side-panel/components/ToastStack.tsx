@@ -19,12 +19,12 @@ export function ToastStack({ toasts }: ToastStackProps) {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`pointer-events-auto rounded-md border px-3 py-2 text-xs shadow-lg backdrop-blur ${
+          className={`pointer-events-auto rounded-lg border px-3 py-2 text-xs font-medium shadow-lg ${
             t.variant === 'success'
-              ? 'border-emerald-200 bg-emerald-50/95 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-100'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
               : t.variant === 'error'
-                ? 'border-red-200 bg-red-50/95 text-red-900 dark:border-red-800 dark:bg-red-950/90 dark:text-red-100'
-                : 'border-stone-200 bg-white/95 text-stone-800 dark:border-stone-700 dark:bg-stone-900/95 dark:text-stone-100'
+                ? 'border-red-200 bg-red-50 text-red-800'
+                : 'border-stone-200 bg-white text-stone-700'
           }`}
         >
           {t.message}

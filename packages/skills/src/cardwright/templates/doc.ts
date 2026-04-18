@@ -2,6 +2,14 @@ import type { CardAnalysis } from '@noteseed/shared-types';
 
 import type { CardwrightRenderMeta } from '../meta.js';
 
+function hashTags(tags: string[]): string {
+  return tags
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .map((t) => (t.startsWith('#') ? t : `#${t}`))
+    .join(' ');
+}
+
 export function render(
   analysis: CardAnalysis,
   meta: CardwrightRenderMeta,
@@ -13,15 +21,15 @@ export function render(
   const examples = analysis.fields.examples?.filter(Boolean) ?? [];
   const tags = analysis.tags?.filter(Boolean) ?? [];
 
-  const mdParts: string[] = [`# ${title}`, '', '## 摘要', summary, ''];
+  const mdParts: string[] = [`## ${title}`, '', '### 摘要', summary, ''];
 
   if (sig) {
-    mdParts.push('## 签名 / 端点', '', '```', sig, '```', '');
+    mdParts.push('### 签名 / 端点', '', '```', sig, '```', '');
   }
   if (params.length) {
     const rows = params.map((p) => `| ${p.name} | ${p.type} | ${p.desc} |`);
     mdParts.push(
-      '## 参数',
+      '### 参数',
       '',
       '| 名称 | 类型 | 说明 |',
       '| --- | --- | --- |',
@@ -30,21 +38,16 @@ export function render(
     );
   }
   if (examples.length) {
-    mdParts.push('## 示例');
+    mdParts.push('### 示例');
     for (const ex of examples) {
       mdParts.push('', '```', ex, '```');
     }
     mdParts.push('');
   }
 
-  const footerBits: string[] = [];
-  if (meta.url) footerBits.push(`来源: ${meta.url}`);
-  if (meta.author) footerBits.push(meta.author);
-  if (meta.publishedAt) footerBits.push(meta.publishedAt);
-  const footerLine = footerBits.join(' · ');
   mdParts.push('---');
-  if (footerLine) mdParts.push(footerLine);
-  if (tags.length) mdParts.push(`标签: ${tags.join(' · ')}`);
+  if (meta.url) mdParts.push(`来源: ${meta.url}`);
+  if (tags.length) mdParts.push(hashTags(tags));
 
   const markdown = mdParts.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd();
 
@@ -63,8 +66,8 @@ export function render(
     plainParts.push('示例', ...examples, '');
   }
   plainParts.push('---');
-  if (footerLine) plainParts.push(footerLine);
-  if (tags.length) plainParts.push(`标签: ${tags.join(' · ')}`);
+  if (meta.url) plainParts.push(`来源: ${meta.url}`);
+  if (tags.length) plainParts.push(hashTags(tags));
 
   return { markdown, plainText: plainParts.join('\n').trim() };
 }

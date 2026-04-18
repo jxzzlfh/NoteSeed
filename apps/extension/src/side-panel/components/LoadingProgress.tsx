@@ -22,13 +22,13 @@ function iconFor(status: PipelineStageStatus): string {
 function rowClass(status: PipelineStageStatus): string {
   switch (status) {
     case 'running':
-      return 'text-seed dark:text-emerald-400';
+      return 'text-seed';
     case 'done':
-      return 'text-emerald-700 dark:text-emerald-300';
+      return 'text-emerald-600';
     case 'failed':
-      return 'text-red-600 dark:text-red-400';
+      return 'text-red-500';
     default:
-      return 'text-stone-400 dark:text-stone-500';
+      return 'text-stone-300';
   }
 }
 
@@ -41,15 +41,15 @@ export function LoadingProgress({ visible, pipeline }: LoadingProgressProps) {
   if (!visible) return null;
   return (
     <section
-      className="rounded-lg border border-stone-200 bg-stone-50 p-3 text-xs dark:border-stone-700 dark:bg-stone-900/60"
+      className="rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm"
       aria-live="polite"
     >
-      <div className="mb-2 font-medium text-stone-700 dark:text-stone-200">流水线</div>
+      <div className="mb-2 text-xs font-semibold text-stone-500">流水线</div>
       <ul className="space-y-1">
         {STAGES.map(({ key, label }) => {
           const status = pipeline[key];
           return (
-            <li key={key} className={`flex items-center justify-between gap-2 ${rowClass(status)}`}>
+            <li key={key} className={`flex items-center justify-between gap-2 text-xs ${rowClass(status)}`}>
               <span className="font-mono text-[11px]">{label}</span>
               <span className="tabular-nums" title={status}>
                 {iconFor(status)}

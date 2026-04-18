@@ -1,5 +1,6 @@
 import { callClaudeWithTool, getPowerfulModel } from '../llm/index.js';
 
+import * as customPromptMod from './prompts/custom.js';
 import * as docPrompt from './prompts/doc.js';
 import * as genericPrompt from './prompts/generic.js';
 import * as newsPrompt from './prompts/news.js';
@@ -12,6 +13,8 @@ export interface DistillerInput {
   cleanText: string;
   title: string;
   pageType: string;
+  retentionLevel?: 'minimal' | 'standard' | 'detailed';
+  customPrompt?: string;
 }
 
 /** Structured extraction; fields depend on page type (see PRD CardFields). */
@@ -41,6 +44,7 @@ const PROMPT_MAP: Record<string, PromptModule> = {
   opinion: opinionPrompt,
   news: newsPrompt,
   doc: docPrompt,
+  custom: customPromptMod,
 };
 
 function coerceSummary(raw: Record<string, unknown>): string {
@@ -116,14 +120,40 @@ function toGeneric(raw: Record<string, unknown>): DistillerOutput {
   };
 }
 
+function toCustom(raw: Record<string, unknown>): DistillerOutput & { actionItems?: string[] } {
+  return {
+    summary: coerceSummary(raw),
+    keyPoints: coerceStringArray(raw, 'keyPoints'),
+    quotes: coerceStringArray(raw, 'quotes'),
+    actionItems: coerceStringArray(raw, 'actionItems'),
+  };
+}
+
+function buildRetentionSuffix(level?: 'minimal' | 'standard' | 'detailed'): string {
+  switch (level) {
+    case 'minimal':
+      return '\n\nIMPORTANT — Concise mode: summary ≤ 2 sentences; keyPoints/steps/keyFacts ≤ 3 items, each ≤ 15 words. Be ruthlessly brief.';
+    case 'detailed':
+      return '\n\nIMPORTANT — Detailed mode: write a thorough paragraph summary. Extract 6–10 key points. Include notable quotes if present. Be comprehensive.';
+    default:
+      return '';
+  }
+}
+
 export async function run(input: DistillerInput): Promise<DistillerOutput> {
   const mod = PROMPT_MAP[input.pageType] ?? genericPrompt;
   const kind = PROMPT_MAP[input.pageType] ? input.pageType : 'generic';
 
+  let userPrompt = mod.buildUserPrompt(input);
+  userPrompt += buildRetentionSuffix(input.retentionLevel);
+  if (input.customPrompt) {
+    userPrompt += `\n\nUser's custom instruction: ${input.customPrompt}`;
+  }
+
   const raw = await callClaudeWithTool({
     model: getPowerfulModel(),
     systemPrompt: mod.systemPrompt,
-    userPrompt: mod.buildUserPrompt(input),
+    userPrompt,
     toolName: DISTILLER_TOOL,
     toolDescription: 'Return structured distillation fields for the page.',
     inputSchema: mod.outputSchema,
@@ -140,6 +170,8 @@ export async function run(input: DistillerInput): Promise<DistillerOutput> {
       return toNews(raw);
     case 'doc':
       return toDoc(raw);
+    case 'custom':
+      return toCustom(raw);
     default:
       return toGeneric(raw);
   }

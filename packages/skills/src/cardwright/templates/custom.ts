@@ -10,28 +10,19 @@ function hashTags(tags: string[]): string {
     .join(' ');
 }
 
+/**
+ * Custom template — renders ONLY the LLM's response to the user's custom prompt.
+ * No extra sections (keyPoints, actionItems, quotes) — just summary + source + tags.
+ */
 export function render(
   analysis: CardAnalysis,
   meta: CardwrightRenderMeta,
 ): { markdown: string; plainText: string } {
   const title = meta.title?.trim() || '无标题';
   const summary = analysis.summary.trim();
-  const keyPoints = analysis.fields.keyPoints?.filter(Boolean) ?? [];
-  const quotes = analysis.fields.quotes?.filter(Boolean) ?? [];
-  const counter = analysis.fields.counterArguments?.filter(Boolean) ?? [];
   const tags = analysis.tags?.filter(Boolean) ?? [];
 
-  const mdParts: string[] = [`## ${title}`, '', '### 摘要', summary, ''];
-
-  if (keyPoints.length) {
-    mdParts.push('### 要点', ...keyPoints.map((s) => `- ${s}`), '');
-  }
-  if (quotes.length) {
-    mdParts.push('### 引述', ...quotes.map((s) => `> ${s}`), '');
-  }
-  if (counter.length) {
-    mdParts.push('### 不同意见与局限', ...counter.map((s) => `- ${s}`), '');
-  }
+  const mdParts: string[] = [`## ${title}`, '', summary, ''];
 
   mdParts.push('---');
   if (meta.url) mdParts.push(`来源: ${meta.url}`);
@@ -39,16 +30,7 @@ export function render(
 
   const markdown = mdParts.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd();
 
-  const plainParts: string[] = [title, '', '摘要', summary, ''];
-  if (keyPoints.length) {
-    plainParts.push('要点', ...keyPoints.map((s) => `- ${s}`), '');
-  }
-  if (quotes.length) {
-    plainParts.push('引述', ...quotes, '');
-  }
-  if (counter.length) {
-    plainParts.push('不同意见与局限', ...counter.map((s) => `- ${s}`), '');
-  }
+  const plainParts: string[] = [title, '', summary, ''];
   plainParts.push('---');
   if (meta.url) plainParts.push(`来源: ${meta.url}`);
   if (tags.length) plainParts.push(hashTags(tags));

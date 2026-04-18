@@ -16,6 +16,9 @@ dist/
 *.swp
 *.swo
 
+# Claude worktrees
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db

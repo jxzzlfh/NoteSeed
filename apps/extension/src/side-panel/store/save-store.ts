@@ -34,11 +34,17 @@ export const useSaveStore = create<SaveState>((set, get) => ({
         payload: { requestId, card, targets },
       })) as MessageResponse;
       if (res.type === 'SAVE_CARD_RESULT') {
-        set({
-          status: 'success',
-          results: res.payload.results,
-          error: null,
-        });
+        const results = res.payload.results as SaveTargetResult[];
+        const failed = results.filter((r) => !r.success);
+        if (failed.length === 0) {
+          set({ status: 'success', results, error: null });
+        } else {
+          set({
+            status: 'error',
+            results,
+            error: failed.map((r) => `${r.target}: ${r.error ?? '未知错误'}`).join('; '),
+          });
+        }
         return;
       }
       if (res.type === 'ERROR') {

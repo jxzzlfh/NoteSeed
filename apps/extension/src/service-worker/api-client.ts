@@ -1,6 +1,4 @@
 import type { KnowledgeCard, PageSource, SaveRequest, SaveResult } from '@noteseed/shared-types';
-import type { MessageWithCorrelation } from '@/shared/messaging.js';
-import { clearAuthToken, getAuthToken } from './auth.js';
 
 const DEFAULT_API_BASE = 'http://localhost:3000';
 const STORAGE_API_BASE = 'apiBaseUrl';
@@ -23,28 +21,11 @@ async function getApiBaseUrl(): Promise<string> {
   return DEFAULT_API_BASE;
 }
 
-async function notifySessionExpired(): Promise<void> {
-  try {
-    const msg: MessageWithCorrelation = {
-      type: 'ERROR',
-      payload: { code: 'UNAUTHORIZED', message: 'Session expired or invalid.' },
-      correlationId: crypto.randomUUID(),
-    };
-    await chrome.runtime.sendMessage(msg);
-  } catch {
-    /* no listeners */
-  }
-}
-
 async function request(path: string, init: RequestInit): Promise<Response> {
   const base = await getApiBaseUrl();
-  const token = await getAuthToken();
   const headers = new Headers(init.headers);
   if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
-  }
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
   }
 
   const controller = new AbortController();
@@ -58,12 +39,6 @@ async function request(path: string, init: RequestInit): Promise<Response> {
     throw e;
   } finally {
     if (activeController === controller) activeController = null;
-  }
-
-  if (res.status === 401) {
-    await clearAuthToken();
-    await notifySessionExpired();
-    throw new Error('UNAUTHORIZED');
   }
 
   if (res.status === 429) {
@@ -82,11 +57,60 @@ async function parseJsonOrThrow(res: Response): Promise<unknown> {
   return JSON.parse(text) as unknown;
 }
 
+const SETTINGS_KEY = 'noteseed_settings_v1';
+
+type AIProviderBlob = {
+  provider: 'anthropic' | 'openai';
+  apiKey: string;
+  baseUrl: string;
+  fastModel: string;
+  powerfulModel: string;
+};
+
+type SettingsBlob = {
+  aiProvider?: AIProviderBlob;
+};
+
+async function readAIProvider(): Promise<
+  | {
+      provider: 'anthropic' | 'openai';
+      apiKey: string;
+      baseUrl?: string;
+      models: { fast: string; powerful: string };
+    }
+  | undefined
+> {
+  const raw = await chrome.storage.local.get(SETTINGS_KEY);
+  const settings = raw[SETTINGS_KEY] as SettingsBlob | undefined;
+  const ai = settings?.aiProvider;
+  if (!ai || !ai.apiKey?.trim() || !ai.fastModel?.trim() || !ai.powerfulModel?.trim()) {
+    return undefined;
+  }
+  return {
+    provider: ai.provider,
+    apiKey: ai.apiKey.trim(),
+    baseUrl: ai.baseUrl?.trim() || undefined,
+    models: { fast: ai.fastModel.trim(), powerful: ai.powerfulModel.trim() },
+  };
+}
+
 export const apiClient = {
-  async generateCard(source: PageSource): Promise<KnowledgeCard> {
+  async generateCard(
+    source: PageSource,
+    opts?: { preferredTemplate?: string; customPrompt?: string },
+  ): Promise<KnowledgeCard> {
+    const aiProvider = await readAIProvider();
+    const options: Record<string, unknown> = {};
+    if (aiProvider) options.aiProvider = aiProvider;
+    if (opts?.preferredTemplate) options.preferredTemplate = opts.preferredTemplate;
+    if (opts?.customPrompt) options.customPrompt = opts.customPrompt;
+
+    const body: Record<string, unknown> = { source };
+    if (Object.keys(options).length > 0) body.options = options;
+
     const res = await request('/api/v1/cards/generate', {
       method: 'POST',
-      body: JSON.stringify({ source }),
+      body: JSON.stringify(body),
     });
     const data = (await parseJsonOrThrow(res)) as { card: KnowledgeCard };
     if (!data.card) {

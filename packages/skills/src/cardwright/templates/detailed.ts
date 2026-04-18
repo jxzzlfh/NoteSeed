@@ -10,6 +10,10 @@ function hashTags(tags: string[]): string {
     .join(' ');
 }
 
+/**
+ * Detailed template — comprehensive card with all available sections.
+ * Uses opinion-distiller fields (quotes, counterArguments) for richer output.
+ */
 export function render(
   analysis: CardAnalysis,
   meta: CardwrightRenderMeta,
@@ -24,11 +28,16 @@ export function render(
   const mdParts: string[] = [`## ${title}`, '', '### 摘要', summary, ''];
 
   if (keyPoints.length) {
-    mdParts.push('### 要点', ...keyPoints.map((s) => `- ${s}`), '');
+    mdParts.push('### 核心要点');
+    keyPoints.forEach((s, i) => mdParts.push(`${i + 1}. ${s}`));
+    mdParts.push('');
   }
+
   if (quotes.length) {
-    mdParts.push('### 引述', ...quotes.map((s) => `> ${s}`), '');
+    mdParts.push('### 原文引述');
+    quotes.forEach((q) => mdParts.push(`> ${q}`, ''));
   }
+
   if (counter.length) {
     mdParts.push('### 不同意见与局限', ...counter.map((s) => `- ${s}`), '');
   }
@@ -41,10 +50,10 @@ export function render(
 
   const plainParts: string[] = [title, '', '摘要', summary, ''];
   if (keyPoints.length) {
-    plainParts.push('要点', ...keyPoints.map((s) => `- ${s}`), '');
+    plainParts.push('核心要点', ...keyPoints.map((s, i) => `${i + 1}. ${s}`), '');
   }
   if (quotes.length) {
-    plainParts.push('引述', ...quotes, '');
+    plainParts.push('原文引述', ...quotes, '');
   }
   if (counter.length) {
     plainParts.push('不同意见与局限', ...counter.map((s) => `- ${s}`), '');

@@ -98,7 +98,7 @@ export function App() {
   const captureReady = capture.status === 'success' && capture.pageSource !== null;
 
   return (
-    <div className="flex h-screen min-h-0 flex-col bg-stone-50 text-stone-900 dark:bg-stone-950 dark:text-stone-100">
+    <div className="flex h-screen min-h-0 flex-col bg-stone-50 text-stone-800">
       <TopBar pageTypeLabel={pageTypeLabel} />
 
       <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3">
@@ -107,6 +107,8 @@ export function App() {
         <ActionBar
           templateId={card.selectedTemplate}
           onTemplateChange={(id) => card.setSelectedTemplate(id)}
+          customPrompt={card.customPrompt}
+          onCustomPromptChange={(p) => card.setCustomPrompt(p)}
           onGenerate={() => void handleGenerate()}
           onReRecognize={() => void capture.capture()}
           disabled={captureLoading}
@@ -139,16 +141,16 @@ export function App() {
         {card.status === 'error' ? (() => {
           const info = getUserFriendlyError(card.error ?? 'GENERATE_FAILED', card.error ?? undefined);
           return (
-            <div className="space-y-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 dark:border-red-900 dark:bg-red-950/60">
-              <p className="text-xs font-medium text-red-800 dark:text-red-200">{info.title}</p>
-              <p className="text-xs text-red-700 dark:text-red-300">{info.message}</p>
+            <div className="space-y-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5">
+              <p className="text-xs font-semibold text-red-700">{info.title}</p>
+              <p className="text-xs text-red-600">{info.message}</p>
               {info.action === 'retry' && (
-                <button type="button" className="text-xs font-medium text-red-800 underline hover:text-red-600 dark:text-red-200" onClick={() => void handleGenerate()}>
+                <button type="button" className="text-xs font-semibold text-red-700 underline hover:text-red-500" onClick={() => void handleGenerate()}>
                   {info.actionLabel}
                 </button>
               )}
               {info.action === 'options' && (
-                <button type="button" className="text-xs font-medium text-red-800 underline hover:text-red-600 dark:text-red-200" onClick={() => void chrome.runtime.openOptionsPage()}>
+                <button type="button" className="text-xs font-semibold text-red-700 underline hover:text-red-500" onClick={() => void chrome.runtime.openOptionsPage()}>
                   {info.actionLabel}
                 </button>
               )}

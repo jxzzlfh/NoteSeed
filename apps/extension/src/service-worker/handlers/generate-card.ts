@@ -1,4 +1,4 @@
-import type { Message } from '@/shared/messages.js';
+import type { GenerateCardPayload, Message } from '@/shared/messages.js';
 import type { MessageWithCorrelation } from '@/shared/messaging.js';
 import { apiClient } from '../api-client.js';
 
@@ -14,7 +14,8 @@ export async function handleGenerateCard(
   }
 
   try {
-    const card = await apiClient.generateCard(message.payload);
+    const { source, preferredTemplate, customPrompt } = message.payload as GenerateCardPayload;
+    const card = await apiClient.generateCard(source, { preferredTemplate, customPrompt });
     return {
       type: 'GENERATE_CARD_RESULT',
       payload: card,

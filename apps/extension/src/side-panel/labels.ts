@@ -17,4 +17,5 @@ export const TEMPLATE_OPTIONS: { id: string; label: string }[] = [
   { id: 'detailed', label: '详细' },
   { id: 'tutorial', label: '教程提炼' },
   { id: 'opinion', label: '观点摘要' },
+  { id: 'custom', label: '自定义提示词' },
 ];

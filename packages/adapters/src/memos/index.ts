@@ -11,15 +11,6 @@ function mapVisibility(v: 'private' | 'public' | undefined): MemosVisibilityApi 
   return 'PRIVATE';
 }
 
-function formatTags(tags: string[]): string {
-  if (tags.length === 0) return '';
-  const lines = tags
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .map((t) => (t.startsWith('#') ? t : `#${t.replace(/^#+/, '')}`));
-  return lines.length > 0 ? `\n\n${lines.join(' ')}` : '';
-}
-
 function getMemosOptions(req: AdapterSaveRequest): {
   visibility: 'private' | 'public';
   renderMode: 'compact' | 'full';
@@ -34,12 +25,11 @@ function getMemosOptions(req: AdapterSaveRequest): {
   return { visibility: 'private', renderMode: 'compact' };
 }
 
-function buildBody(markdown: string, tags: string[], renderMode: 'compact' | 'full'): string {
-  let body = markdown;
-  if (renderMode === 'compact' && body.length > COMPACT_MAX_CHARS) {
-    body = `${body.slice(0, COMPACT_MAX_CHARS)}\n\n…`;
+function buildBody(markdown: string, renderMode: 'compact' | 'full'): string {
+  if (renderMode === 'compact' && markdown.length > COMPACT_MAX_CHARS) {
+    return `${markdown.slice(0, COMPACT_MAX_CHARS)}\n\n…`;
   }
-  return `${body}${formatTags(tags)}`;
+  return markdown;
 }
 
 function getCredential(req: AdapterSaveRequest): unknown {
@@ -72,7 +62,7 @@ export class MemosAdapter implements Adapter {
       };
     }
     const { visibility, renderMode } = getMemosOptions(req);
-    const body = buildBody(req.markdown, req.card.analysis.tags, renderMode);
+    const body = buildBody(req.markdown, renderMode);
     const vis = mapVisibility(visibility);
     try {
       const created = await createMemo(cred.baseUrl, cred.accessToken, body, vis);

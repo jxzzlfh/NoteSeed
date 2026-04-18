@@ -48,18 +48,20 @@ export function CardPreview({ card, markdown, onMarkdownChange, onTitleChange, o
 
   const markdownBody = useMemo(() => {
     const lines = markdown.split('\n');
-    if (lines[0]?.trim().startsWith('# ')) {
+    const first = lines[0]?.trim() ?? '';
+    if (first.startsWith('## ') || first.startsWith('# ')) {
       return lines.slice(1).join('\n').replace(/^\n+/, '');
     }
     return markdown;
   }, [markdown]);
 
   return (
-    <section className="flex min-h-0 flex-col gap-2 rounded-lg border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900/80">
-      <div className="flex items-start justify-between gap-2 border-b border-stone-100 px-3 py-2 dark:border-stone-800">
+    <section className="flex min-h-0 flex-col rounded-xl border border-stone-200 bg-white shadow-sm">
+      {/* Title bar */}
+      <div className="flex items-start justify-between gap-2 border-b border-stone-100 px-3.5 py-2.5">
         {editingTitle ? (
           <input
-            className="w-full rounded border border-seed/50 bg-white px-2 py-1 text-sm font-semibold text-stone-900 focus:outline-none focus:ring-1 focus:ring-seed dark:border-emerald-700 dark:bg-stone-950 dark:text-stone-100"
+            className="w-full rounded-md border border-seed/40 bg-seed/5 px-2 py-1 text-sm font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-seed/30"
             value={titleDraft}
             autoFocus
             onChange={(e) => setTitleDraft(e.target.value)}
@@ -77,20 +79,20 @@ export function CardPreview({ card, markdown, onMarkdownChange, onTitleChange, o
           />
         ) : (
           <h2
-            className="line-clamp-2 cursor-text select-text text-sm font-semibold text-stone-900 dark:text-stone-100"
+            className="line-clamp-2 cursor-text select-text text-sm font-bold leading-snug text-stone-800"
             title="双击编辑标题"
             onDoubleClick={() => setEditingTitle(true)}
           >
             {card.source.title || '（无标题）'}
           </h2>
         )}
-        <div className="flex shrink-0 gap-1 rounded-md bg-stone-100 p-0.5 dark:bg-stone-800">
+        <div className="flex shrink-0 gap-0.5 rounded-lg bg-stone-100 p-0.5">
           <button
             type="button"
-            className={`rounded px-2 py-1 text-[11px] font-medium ${
+            className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
               mode === 'preview'
-                ? 'bg-white text-seed shadow-sm dark:bg-stone-900 dark:text-emerald-400'
-                : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
+                ? 'bg-white text-seed shadow-sm'
+                : 'text-stone-500 hover:text-stone-700'
             }`}
             onClick={() => setMode('preview')}
           >
@@ -98,10 +100,10 @@ export function CardPreview({ card, markdown, onMarkdownChange, onTitleChange, o
           </button>
           <button
             type="button"
-            className={`rounded px-2 py-1 text-[11px] font-medium ${
+            className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition ${
               mode === 'source'
-                ? 'bg-white text-seed shadow-sm dark:bg-stone-900 dark:text-emerald-400'
-                : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
+                ? 'bg-white text-seed shadow-sm'
+                : 'text-stone-500 hover:text-stone-700'
             }`}
             onClick={() => setMode('source')}
           >
@@ -110,18 +112,19 @@ export function CardPreview({ card, markdown, onMarkdownChange, onTitleChange, o
         </div>
       </div>
 
-      <div className="px-3 pb-2">
-        <div className="mb-1 text-[11px] font-medium text-stone-500 dark:text-stone-400">标签</div>
+      {/* Tags */}
+      <div className="border-b border-stone-100 px-3.5 py-2">
+        <div className="mb-1.5 text-[11px] font-medium text-stone-400">标签</div>
         <div className="flex flex-wrap gap-1.5">
           {tags.map((t) => (
             <span
               key={t}
-              className="inline-flex items-center gap-1 rounded-full bg-seed/10 px-2 py-0.5 text-[11px] text-seed dark:bg-emerald-900/40 dark:text-emerald-300"
+              className="inline-flex items-center gap-1 rounded-full bg-seed/8 px-2.5 py-0.5 text-[11px] font-medium text-seed"
             >
               {t}
               <button
                 type="button"
-                className="rounded hover:bg-seed/20 dark:hover:bg-emerald-800/40"
+                className="ml-0.5 rounded-full text-seed/50 transition hover:text-seed"
                 aria-label={`移除标签 ${t}`}
                 onClick={() => removeTag(t)}
               >
@@ -130,7 +133,7 @@ export function CardPreview({ card, markdown, onMarkdownChange, onTitleChange, o
             </span>
           ))}
           <input
-            className="min-w-[6rem] flex-1 rounded border border-dashed border-stone-200 bg-transparent px-2 py-0.5 text-[11px] text-stone-800 focus:border-seed focus:outline-none dark:border-stone-600 dark:text-stone-200"
+            className="min-w-[6rem] flex-1 rounded-md border border-dashed border-stone-200 bg-transparent px-2 py-0.5 text-[11px] text-stone-600 placeholder:text-stone-300 focus:border-seed focus:outline-none"
             placeholder="添加标签…"
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
@@ -147,16 +150,15 @@ export function CardPreview({ card, markdown, onMarkdownChange, onTitleChange, o
         </div>
       </div>
 
-      <div className="min-h-[12rem] max-h-[40vh] overflow-auto border-t border-stone-100 px-3 py-2 dark:border-stone-800">
+      {/* Content */}
+      <div className="min-h-[12rem] max-h-[40vh] overflow-auto px-3.5 py-3">
         {mode === 'preview' ? (
-          <article
-            className="markdown-preview text-sm leading-relaxed text-stone-800 dark:text-stone-200 [&_a]:text-seed [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-stone-300 [&_blockquote]:pl-3 [&_blockquote]:text-stone-600 dark:[&_blockquote]:border-stone-600 dark:[&_blockquote]:text-stone-400 [&_code]:rounded [&_code]:bg-stone-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[11px] dark:[&_code]:bg-stone-800 [&_h1]:mb-2 [&_h1]:text-base [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-3 [&_h2]:text-sm [&_h2]:font-semibold [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-stone-100 [&_pre]:p-2 dark:[&_pre]:bg-stone-950 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-stone-200 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-stone-200 [&_th]:px-2 [&_th]:py-1 dark:[&_td]:border-stone-700 dark:[&_th]:border-stone-700 [&_ul]:list-disc [&_ul]:pl-5"
-          >
+          <article className="prose prose-sm prose-stone max-w-none text-sm leading-relaxed text-stone-700 [&_a]:text-seed [&_a]:no-underline [&_a]:hover:underline [&_blockquote]:border-l-[3px] [&_blockquote]:border-seed/30 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-stone-500 [&_code]:rounded [&_code]:bg-stone-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-[11px] [&_code]:text-seed [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-[13px] [&_h2]:font-bold [&_h2]:text-stone-800 [&_h3]:mb-1.5 [&_h3]:mt-3 [&_h3]:text-[13px] [&_h3]:font-semibold [&_h3]:text-stone-700 [&_hr]:my-3 [&_hr]:border-stone-200 [&_li]:my-0.5 [&_li]:text-stone-600 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1.5 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-stone-50 [&_pre]:p-3 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-stone-200 [&_td]:px-2 [&_td]:py-1 [&_td]:text-stone-600 [&_th]:border [&_th]:border-stone-200 [&_th]:bg-stone-50 [&_th]:px-2 [&_th]:py-1 [&_th]:font-semibold [&_ul]:list-disc [&_ul]:pl-5">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdownBody || '_（空内容）_'}</ReactMarkdown>
           </article>
         ) : (
           <textarea
-            className="h-full min-h-[12rem] w-full resize-y rounded-md border border-stone-200 bg-stone-50 p-2 font-mono text-[11px] leading-relaxed text-stone-900 focus:border-seed focus:outline-none focus:ring-1 focus:ring-seed dark:border-stone-600 dark:bg-stone-950 dark:text-stone-100"
+            className="h-full min-h-[12rem] w-full resize-y rounded-lg border border-stone-200 bg-stone-50 p-3 font-mono text-[11px] leading-relaxed text-stone-700 focus:border-seed focus:outline-none focus:ring-2 focus:ring-seed/20"
             value={markdown}
             spellCheck={false}
             onChange={(e) => onMarkdownChange(e.target.value)}

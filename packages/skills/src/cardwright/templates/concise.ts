@@ -10,27 +10,34 @@ function hashTags(tags: string[]): string {
     .join(' ');
 }
 
+/**
+ * Concise template — ultra-compact card.
+ * One-line takeaway as blockquote + max 3 tight bullets.
+ */
 export function render(
   analysis: CardAnalysis,
   meta: CardwrightRenderMeta,
 ): { markdown: string; plainText: string } {
   const title = meta.title?.trim() || '无标题';
   const summary = analysis.summary.trim();
-  const keyPoints = analysis.fields.keyPoints?.filter(Boolean) ?? [];
-  const quotes = analysis.fields.quotes?.filter(Boolean) ?? [];
-  const counter = analysis.fields.counterArguments?.filter(Boolean) ?? [];
   const tags = analysis.tags?.filter(Boolean) ?? [];
 
-  const mdParts: string[] = [`## ${title}`, '', '### 摘要', summary, ''];
+  const allPoints = [
+    ...(analysis.fields.keyPoints ?? []),
+    ...(analysis.fields.keyFacts ?? []),
+    ...(analysis.fields.steps ?? []),
+  ].filter(Boolean);
+  const topPoints = allPoints.slice(0, 3);
 
-  if (keyPoints.length) {
-    mdParts.push('### 要点', ...keyPoints.map((s) => `- ${s}`), '');
-  }
-  if (quotes.length) {
-    mdParts.push('### 引述', ...quotes.map((s) => `> ${s}`), '');
-  }
-  if (counter.length) {
-    mdParts.push('### 不同意见与局限', ...counter.map((s) => `- ${s}`), '');
+  const mdParts: string[] = [
+    `## ${title}`,
+    '',
+    `> ${(summary.split(/[。.！!？?]/)[0] ?? summary).trim()}`,
+    '',
+  ];
+
+  if (topPoints.length) {
+    mdParts.push(...topPoints.map((s) => `- ${s}`), '');
   }
 
   mdParts.push('---');
@@ -39,16 +46,8 @@ export function render(
 
   const markdown = mdParts.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd();
 
-  const plainParts: string[] = [title, '', '摘要', summary, ''];
-  if (keyPoints.length) {
-    plainParts.push('要点', ...keyPoints.map((s) => `- ${s}`), '');
-  }
-  if (quotes.length) {
-    plainParts.push('引述', ...quotes, '');
-  }
-  if (counter.length) {
-    plainParts.push('不同意见与局限', ...counter.map((s) => `- ${s}`), '');
-  }
+  const plainParts: string[] = [title, '', (summary.split(/[。.]/)[0] ?? summary).trim(), ''];
+  if (topPoints.length) plainParts.push(...topPoints.map((s) => `- ${s}`), '');
   plainParts.push('---');
   if (meta.url) plainParts.push(`来源: ${meta.url}`);
   if (tags.length) plainParts.push(hashTags(tags));

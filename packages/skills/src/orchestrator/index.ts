@@ -25,6 +25,7 @@ async function timed<T>(fn: () => Promise<T>): Promise<{ result: T; ms: number }
 
 export interface GenerateCardOptions {
   preferredTemplate?: string;
+  customPrompt?: string;
   retentionLevel?: 'minimal' | 'standard' | 'detailed';
   target?: string;
   userTagHistory?: string[];
@@ -103,6 +104,31 @@ async function runPipeline(
     timings.contextualizer_ms = 0;
   }
 
+  const TEMPLATE_TO_PAGETYPE: Record<string, string> = {
+    tutorial: 'tutorial',
+    opinion: 'opinion',
+    detailed: 'opinion',
+  };
+  const TEMPLATE_TO_RETENTION: Record<string, 'minimal' | 'standard' | 'detailed'> = {
+    concise: 'minimal',
+    detailed: 'detailed',
+  };
+
+  const tplOverride = options.preferredTemplate
+    ? TEMPLATE_TO_PAGETYPE[options.preferredTemplate]
+    : undefined;
+  const effectivePageType = tplOverride ?? pageType;
+
+  // 'custom' uses a dedicated distiller prompt but keeps the real pageType for validation
+  const distillerPageType =
+    options.preferredTemplate === 'custom' ? 'custom' : effectivePageType;
+
+  const retentionLevel =
+    options.retentionLevel ??
+    (options.preferredTemplate
+      ? TEMPLATE_TO_RETENTION[options.preferredTemplate]
+      : undefined);
+
   let summary = '';
   let fields: CardFields = {};
 
@@ -111,7 +137,9 @@ async function runPipeline(
       runDistiller({
         cleanText: source.selectedText ?? source.cleanText,
         title: source.title,
-        pageType,
+        pageType: distillerPageType,
+        retentionLevel,
+        customPrompt: options.customPrompt,
       }),
     );
     timings.distiller_ms = dist.ms;
@@ -142,7 +170,7 @@ async function runPipeline(
   }
 
   const analysis: CardAnalysis = {
-    pageType: pageType as CardAnalysis['pageType'],
+    pageType: effectivePageType as CardAnalysis['pageType'],
     confidence,
     summary,
     fields,
@@ -163,6 +191,7 @@ async function runPipeline(
         author,
         publishedAt,
         target: options.target,
+        preferredTemplate: options.preferredTemplate,
       }),
     );
     timings.cardwright_ms = cw.ms;

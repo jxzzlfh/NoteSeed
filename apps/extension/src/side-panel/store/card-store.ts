@@ -14,12 +14,14 @@ export interface CardState {
   markdown: string;
   error: string | null;
   selectedTemplate: string;
+  customPrompt: string;
   pipeline: Record<PipelineStageKey, PipelineStageStatus>;
   generate: (source: PageSource) => Promise<void>;
   updateMarkdown: (md: string) => void;
   updateTags: (tags: string[]) => void;
   updateTitle: (title: string) => void;
   setSelectedTemplate: (id: string) => void;
+  setCustomPrompt: (prompt: string) => void;
   resetPipeline: () => void;
 }
 
@@ -50,10 +52,13 @@ export const useCardStore = create<CardState>((set, get) => ({
   markdown: '',
   error: null,
   selectedTemplate: 'balanced',
+  customPrompt: '',
   pipeline: initialPipeline(),
   resetPipeline: () => set({ pipeline: initialPipeline() }),
   setSelectedTemplate: (id) => set({ selectedTemplate: id }),
+  setCustomPrompt: (prompt) => set({ customPrompt: prompt }),
   generate: async (source) => {
+    const { selectedTemplate, customPrompt } = get();
     set({
       status: 'generating',
       error: null,
@@ -73,7 +78,11 @@ export const useCardStore = create<CardState>((set, get) => ({
       });
       const res = (await sendMessage({
         type: 'GENERATE_CARD',
-        payload: source,
+        payload: {
+          source,
+          preferredTemplate: selectedTemplate,
+          customPrompt: customPrompt || undefined,
+        },
       })) as MessageResponse;
       if (res.type === 'GENERATE_CARD_RESULT') {
         const tpl = get().selectedTemplate;
