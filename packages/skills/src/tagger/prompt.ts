@@ -7,7 +7,7 @@
 
 export const systemPrompt = `You are NoteSeed's Tagger. From the provided summary and key points, emit exactly one tool call with this JSON shape:
 {
-  "tags": string[],      // 3–5 short labels
+  "tags": string[],      // exactly 3 short labels
   "category": string,    // hierarchical path with "/" segments (max ~3 levels)
   "topic": string        // a few words naming the main subject
 }
@@ -48,7 +48,7 @@ ${kp}
 USER TAG HISTORY (prefer these when applicable):
 ${hist}
 
-Call the tool with tags (3–5 items), category, and topic.`;
+Call the tool with tags (exactly 3 items), category, and topic.`;
 }
 
 export const outputSchema = {
@@ -58,8 +58,8 @@ export const outputSchema = {
       type: 'array',
       items: { type: 'string' },
       minItems: 3,
-      maxItems: 5,
-      description: 'Three to five tags.',
+      maxItems: 3,
+      description: 'Exactly three tags.',
     },
     category: { type: 'string', description: 'Hierarchical category path.' },
     topic: { type: 'string', description: 'Main subject in a few words.' },

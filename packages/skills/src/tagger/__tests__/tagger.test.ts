@@ -41,7 +41,7 @@ describe('tagger', () => {
     ).rejects.toThrow('API down');
   });
 
-  it('caps tags to 5 items', async () => {
+  it('caps tags to 3 items', async () => {
     mockedCall.mockResolvedValueOnce({
       tags: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
       category: 'misc',
@@ -49,7 +49,7 @@ describe('tagger', () => {
     });
 
     const result = await run({ summary: 'many tags', keyPoints: [] });
-    expect(result.tags.length).toBeLessThanOrEqual(5);
+    expect(result.tags.length).toBeLessThanOrEqual(3);
   });
 
   it('defaults category to 未分类 when missing', async () => {

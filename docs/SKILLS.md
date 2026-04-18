@@ -117,11 +117,11 @@ PageSense 先执行三种非 AI 检测：
 
 **模型角色**: fast
 **输入**: summary, keyPoints, userTagHistory
-**输出**: tags (3-5), category, topic
+**输出**: tags (3), category, topic
 
 ### 标签策略
 
-- 基于 summary 和 keyPoints 生成 3-5 个标签
+- 基于 summary 和 keyPoints 生成 3 个标签
 - 参考 userTagHistory 保持标签体系一致性
 - category 是宽泛分类（如 "技术"、"商业"、"设计"）
 - topic 是具体主题（如 "React Hooks"、"容器化"）

@@ -15,7 +15,7 @@ export interface TaggerInput {
 function coerceTags(raw: Record<string, unknown>): string[] {
   const v = raw['tags'];
   if (!Array.isArray(v)) return [];
-  const tags = v.filter((x): x is string => typeof x === 'string').slice(0, 5);
+  const tags = v.filter((x): x is string => typeof x === 'string').slice(0, 3);
   if (tags.length >= 3) return tags;
   // Pad is invalid — return what we have; caller may validate upstream
   return tags;

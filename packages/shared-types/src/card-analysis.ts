@@ -102,7 +102,7 @@ export interface CardAnalysis {
   summary: string;
   /** Structured fields, varying by pageType */
   fields: CardFields;
-  /** 3–5 recommended tags */
+  /** 3 recommended tags */
   tags: string[];
   /** Hierarchical category, e.g. "技术/前端" */
   category?: string;
