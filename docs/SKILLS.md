@@ -106,6 +106,7 @@ PageSense 先执行三种非 AI 检测：
 - **news**: 提取 who, what, when, where, impact
 - **doc**: 提取 purpose, apiSurface, requirements
 - **generic**: 通用提取
+- **custom**: 用户自定义提示词，所有输出归入 summary 单字段
 
 ### 调优指南
 
@@ -128,21 +129,25 @@ PageSense 先执行三种非 AI 检测：
 ## Cardwright — 模板渲染
 
 **无 LLM**：纯 TypeScript 字符串模板
-**输入**: CardAnalysis, title, url, author, publishedAt
+**输入**: CardAnalysis, title, url, tags, preferredTemplate
 **输出**: markdown, plainText, wordCount
 
-### 模板
+### 6 种卡片模板
 
-每种 pageType 有对应模板，优雅处理缺失字段：
-- 标题 + 来源 URL
-- 摘要
-- 类型特定内容（步骤/论点/5W1H...）
-- 标签
-- 元数据（作者/日期）
+| 模板 ID | 名称 | 说明 |
+|---------|------|------|
+| `balanced` | 平衡 | 默认模板，摘要 + 要点 + 引述 |
+| `concise` | 精简 | 极简输出，一句话摘要 + 3 个核心要点 |
+| `detailed` | 详细 | 完整卡片，含引述、不同意见与反论点 |
+| `tutorial` | 教程提炼 | 提取步骤、前置条件、代码片段 |
+| `opinion` | 观点摘要 | 聚焦论点、论据、立场分析 |
+| `custom` | 自定义提示词 | 仅渲染摘要 + 来源 + 标签 |
 
-### Compact 模式
+模板选择优先级：用户指定 `preferredTemplate` > 页面类型自动匹配。
 
-目标为 Memos 时截断至 ~1500 字符。
+### 标签格式
+
+输出 `#标签1 #标签2` 格式，直接兼容 Memos 标签系统。
 
 ## Orchestrator — 编排
 
@@ -152,7 +157,11 @@ PageSense 先执行三种非 AI 检测：
 PageSense → Contextualizer → Distiller → Tagger → Cardwright
 ```
 
-当 `options.aiProvider` 存在时，管线使用用户自定义的 AI 提供者；否则回退到环境变量配置。
+### 关键选项
+
+- `options.aiProvider` — 用户自定义 AI 提供者（否则回退到环境变量）
+- `options.preferredTemplate` — 指定卡片模板（影响 Distiller prompt 和 Cardwright 渲染）
+- `options.customPrompt` — 自定义提示词（仅 `custom` 模板时生效）
 
 每步用 `timed()` 包装计时。任一步骤失败不阻塞后续步骤（降级到默认值）。
 
