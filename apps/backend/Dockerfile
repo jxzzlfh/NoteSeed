@@ -21,8 +21,6 @@ RUN pnpm --filter @noteseed/shared-types build \
  && pnpm --filter @noteseed/adapters build \
  && pnpm --filter @noteseed/backend build
 
-RUN cd apps/backend && pnpm exec prisma generate
-
 # Stage 2: Production
 FROM node:20-alpine AS runner
 
@@ -43,7 +41,7 @@ COPY --from=builder /app/apps/backend/prisma apps/backend/prisma/
 
 RUN pnpm install --frozen-lockfile --prod
 
-COPY --from=builder /app/node_modules/.prisma node_modules/.prisma/
+RUN cd apps/backend && npx prisma@5.20.0 generate
 
 ENV NODE_ENV=production
 EXPOSE 3000
