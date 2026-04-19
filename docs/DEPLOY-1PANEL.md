@@ -190,49 +190,9 @@ docker compose version
 
 没有的话：1Panel → **工具箱** → **Docker** → 一键安装。
 
-### 6.2 创建生产 Compose 文件
+### 6.2 确认生产 Compose 文件
 
-```bash
-cat > /opt/noteseed/docker-compose.prod.yml << 'YAML'
-services:
-  postgres:
-    image: postgres:16
-    container_name: noteseed-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: noteseed
-    volumes:
-      - noteseed-pg-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  backend:
-    build:
-      context: .
-      dockerfile: apps/backend/Dockerfile
-    container_name: noteseed-backend
-    restart: unless-stopped
-    ports:
-      - '3000:3000'
-    environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/noteseed
-      CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY}
-      NODE_ENV: production
-      PORT: 3000
-      LOG_LEVEL: info
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-volumes:
-  noteseed-pg-data:
-YAML
-```
+项目已自带 `docker-compose.prod.yml`，无需手动创建。该文件通过 `env_file: .env.production` 自动加载环境变量。
 
 在 `.env.production` 里追加一行数据库密码变量（方便 Compose 引用）：
 
@@ -244,9 +204,6 @@ echo 'POSTGRES_PASSWORD=你的密码' >> .env.production
 
 ```bash
 cd /opt/noteseed
-
-# 加载 .env.production 并启动
-set -a && source .env.production && set +a
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
@@ -372,8 +329,6 @@ curl -s -X POST http://localhost:3000/api/v1/cards/generate \
 ```bash
 cd /opt/noteseed
 git pull origin main
-
-set -a && source .env.production && set +a
 docker compose -f docker-compose.prod.yml up -d --build
 
 # 若有数据库 schema 变更
