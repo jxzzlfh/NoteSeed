@@ -146,16 +146,26 @@ tar -xzf noteseed.tar.gz && rm noteseed.tar.gz
 cd /opt/noteseed
 ```
 
-创建 `.env.production`：
+先生成加密密钥：
+
+```bash
+openssl rand -base64 32
+# 输出类似：RhDoqEsYbBcajWjpxyS4dXOLkwOtvZ4fzCvA1gE2cSc=
+```
+
+创建 `.env.production`（把下面的 `你的密码` 和 `你的密钥` 替换为真实值）：
 
 ```bash
 cat > .env.production << 'EOF'
-# ===== 数据库 =====
+# ===== PostgreSQL（被 docker-compose.prod.yml 的 env_file 直接读取）=====
+POSTGRES_PASSWORD=你的密码
+
+# ===== 后端连接串（密码要与上面一致）=====
 # Docker Compose 内部署用 postgres，1Panel 应用商店装的用 host.docker.internal
 DATABASE_URL=postgresql://postgres:你的密码@postgres:5432/noteseed
 
 # ===== 凭据加密 (AES-256) =====
-CREDENTIAL_ENCRYPTION_KEY=先用下面命令生成
+CREDENTIAL_ENCRYPTION_KEY=你的密钥
 
 # ===== 运行时 =====
 NODE_ENV=production
@@ -164,18 +174,7 @@ LOG_LEVEL=info
 EOF
 ```
 
-生成加密密钥：
-
-```bash
-openssl rand -base64 32
-# 输出类似：RhDoqEsYbBcajWjpxyS4dXOLkwOtvZ4fzCvA1gE2cSc=
-```
-
-把输出填入 `.env.production` 的 `CREDENTIAL_ENCRYPTION_KEY=`。
-
-```bash
-nano .env.production   # 编辑替换
-```
+> **重要**：`POSTGRES_PASSWORD` 的值必须与 `DATABASE_URL` 连接串中的密码保持一致。
 
 ---
 
@@ -192,13 +191,7 @@ docker compose version
 
 ### 6.2 确认生产 Compose 文件
 
-项目已自带 `docker-compose.prod.yml`，无需手动创建。该文件通过 `env_file: .env.production` 自动加载环境变量。
-
-在 `.env.production` 里追加一行数据库密码变量（方便 Compose 引用）：
-
-```bash
-echo 'POSTGRES_PASSWORD=你的密码' >> .env.production
-```
+项目已自带 `docker-compose.prod.yml`，无需手动创建。该文件通过 `env_file: .env.production` 自动将变量注入容器。
 
 ### 6.3 构建并启动
 

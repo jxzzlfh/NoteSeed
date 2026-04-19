@@ -6,7 +6,6 @@ services:
     env_file: .env.production
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: noteseed
     volumes:
       - noteseed-pg-data:/var/lib/postgresql/data
@@ -26,8 +25,6 @@ services:
     ports:
       - '3000:3000'
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/noteseed
-      CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY}
       NODE_ENV: production
       PORT: 3000
       LOG_LEVEL: info
