@@ -24,6 +24,7 @@ RUN pnpm --filter @noteseed/shared-types build \
 # Stage 2: Production
 FROM node:20-alpine AS runner
 
+RUN apk add --no-cache openssl
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
 WORKDIR /app
