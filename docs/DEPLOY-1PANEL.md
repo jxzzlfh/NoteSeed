@@ -220,7 +220,7 @@ docker compose -f docker-compose.prod.yml logs -f backend
 
 ```bash
 docker exec -it noteseed-backend sh -c \
-  "cd /app/apps/backend && npx prisma migrate deploy"
+  "cd /app/apps/backend && npx prisma@5.20.0 migrate deploy"
 ```
 
 输出 `All migrations have been successfully applied` 即完成。
@@ -326,7 +326,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 # 若有数据库 schema 变更
 docker exec -it noteseed-backend sh -c \
-  "cd /app/apps/backend && npx prisma migrate deploy"
+  "cd /app/apps/backend && npx prisma@5.20.0 migrate deploy"
 ```
 
 ### 常用命令
